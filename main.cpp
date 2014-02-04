@@ -1,103 +1,131 @@
+#include <Joystick.h>
+
 #include "main.h"
 #include "612.h"
-#include <DigitalInput.h>
-#include <Relay.h>
-#include <Joystick.h>
+#include "SmoothJoystick.h"
 #include "ports.h"
+#include "Controls.h"
 
-main_robot* robot=NULL;
 
-main_robot::main_robot()
-{
-    printf("hello\n");
-    printf("world\n");
-    robot=this;
-}
+robot_class* robot=NULL;
 
-main_robot::~main_robot()
+robot_class::robot_class()
 {
 }
 
-void main_robot::RobotInit()
+void robot_class::RobotInit()
 {
-    printf("robot init\n");
-    update = new FunctionRegistry();
+    robot = this;
     driverJoy = new SmoothJoystick(DRIVER_JOY_PORT);
-    gunnerJoy = new SmoothJoystick(GUNNER_JOY_PORT);
-    pnum = new Pneumatics(PNUM_DIGIN_MODULE, PNUM_DIGIN_CHANNEL, PNUM_RELAY_MODULE, PNUM_RELAY_CHANNEL);
-    shift = new Shifter(SHIFT_MOD, SHIFT_FCHAN, SHIFT_RCHAN);
-    shift->setHigh();
-    drive = new DriveTrain(TALON_FL_MODULE, TALON_FL_CHANNEL,
-                           TALON_RL_MODULE, TALON_RL_CHANNEL,
-                           TALON_FR_MODULE, TALON_FR_CHANNEL,
-                           TALON_RR_MODULE, TALON_RR_CHANNEL);
-    shoot = new Shooter(SHOOT_JAG_MODULE,
-                        SHOOT_TALON_MODULE, SHOOT_TALON_CHANNEL,
-                        SHOOT_SLNOID_MODULE, SHOOT_SLNOID_FCHAN, SHOOT_SLNOID_RCHAN,
-                        GUNNER_JOY_PORT);
-    printf("robot init exit\n");
-}
-void main_robot::TeleopInit()
-{
-
-}
-void main_robot::AutonomousInit()
-{
-
-}
-void main_robot::TestInit()
-{
-
-}
-void main_robot::DisabledInit()
-{
-
-}
-void main_robot::TeleopPeriodic()
-{
-    printf("Teleop periodic 1\n");
-    update->updateFunctions();
-    printf("Teleop periodic 2\n");
-    float left = driverJoy->GetRawAxis(2);
-    printf("Teleop periodic 3\n");
-    float right = driverJoy->GetRawAxis(5);
-    printf("Teleop periodic 4\n");
-    drive->TankDrive(left, right);
-    printf("Teleop periodic end :)\n");
+    
+    sense = new Sensors();
+    motors = new Motors();
+    pneumatics = new Pneumatics();
 }
 
-void main_robot::AutonomousPeriodic()
+void robot_class::DisabledInit()
 {
 }
 
-void main_robot::DisabledPeriodic()
+void robot_class::DisabledPeriodic()
+{
+}
+
+void robot_class::AutonomousInit()
 {
 
 }
-void main_robot::TestPeriodic()
+
+void robot_class::AutonomousPeriodic()
 {
-    static int output=0;
-    if(output%20==0)
+
+}
+
+void robot_class::TeleopInit()
+{
+
+}
+
+void robot_class::TeleopPeriodic()
+{
+
+}
+
+void robot_class::TestInit()
+{
+    button = MOTORS;
+    selection = 0;
+}
+
+void robot_class::TestPeriodic()
+{
+    static int lastSelection = 0;
+    updateRegistry.update();
+    if (selection < 0)
+        selection = 0;
+    if (selection < lastSelection)
+        std::printf("DECREMENT");
+    else if (selection > lastSelection)
+        std::printf("INCREMENT");
+    getButtons();
+    if (button == SENSORS)
+        sense -> runSensors(selection);
+    else if (button == PNEUMATICS)
+        pneumatics -> runPneumatics(selection);
+    else if (button == MOTORS)
+        motors -> runMotor(selection);
+    lastSelection = selection;
+}
+void robot_class::printStuff()
+{
+    std::printf("R1: Increment selection\nL1: Decrement selection\nLeft Analog stick for control\n\n");
+    std::printf("TRIANGLE: Print instructions\n");
+    std::printf("CIRCLE: Pneumatics\n\t0:Shifters\n\t1:Clamp\n");
+    std::printf("SQUARE: Sensors\n\t0: Digital Switch\n\t1: Left Encoder\n\t2:Right Encoder\n");
+    std::printf("X: MOTORS\n\t0: Drivetrain\n\t1: Talon 1\n\t2: Talon 2\n\t3: Talon 3\n\t4: Talon 4\n\n\t5: Grabber\n\t6: Tilt control\n\t7: Compressor\n");
+}
+void robot_class::getButtons()
+{
+    if (driverJoy->GetRawButton(BUTTON_X))
     {
-        printf("test periodic\n");
+        button = SENSORS;
+        std::printf("SENSORS\n");
+        selection = 0;
     }
-    output++;
-    pnum->checkPressure();
-    pnum->updateSolenoid();
-    if(gunnerJoy->GetRawButton(5))
+    if (driverJoy->GetRawButton(BUTTON_A))
     {
-        if(shift->gear!=Shifter::low)
+        button = MOTORS;
+        std::printf("MOTORS\n");
+        selection = 0;
+    }
+    else if (driverJoy->GetRawButton(BUTTON_B))
+    {
+        button = PNEUMATICS;
+        std::printf("PNEUMATICS\n");
+        selection = 0;
+    }
+    else if (driverJoy->GetRawButton(BUTTON_Y))
+    {
+        printStuff();
+    }
+    if (driverJoy->GetRawButton(BUTTON_R1))
+    {
+        selection++;
+        //std::printf("INCREMENT\n");
+        if (button == MOTORS)
         {
-            shift->setLow();
+            motors->disable();
         }
     }
-    else if(gunnerJoy->GetRawButton(6))
+    else if (driverJoy->GetRawButton(BUTTON_L1))
     {
-        if(shift->gear!=Shifter::high)
+        selection--;
+        //std::printf("DECREMENT\n");
+        if (button == MOTORS)
         {
-            shift->setHigh();
+            motors->disable();
         }
     }
 }
 
-START_ROBOT_CLASS(main_robot)
+START_ROBOT_CLASS(robot_class)

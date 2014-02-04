@@ -1,29 +1,31 @@
-#ifndef PNEUMATICS_H
-#define PNEUMATICS_H
+#ifndef Pneumatics_H
+#define Pneumatics_H
 
-#include <vector>
-#include <IterativeRobot.h>
-#include <DigitalInput.h>
-#include <Relay.h>
-#include <Timer.h>
 #include <DoubleSolenoid.h>
-#include "DriveTrain.h"
+#include <Timer.h>
+#include <Relay.h>
+#include <DigitalInput.h>
+#include "Controls.h"
+//#include "main.h"
+#include "ports.h"
+#include "612.h"
 
 class Pneumatics
 {
-    public:
-        Pneumatics(uint8_t digitalMod, uint32_t digitalChannel,
-                   uint8_t compModuleNumber, uint32_t compChannel);
-        void checkPressure();
-        void setVectorValues(double timerValues, DoubleSolenoid* startSolenoid, DoubleSolenoid::Value value);
-        void updateSolenoid();
-        static void UpdateHelper(void* instName);
-    private:
-        DigitalInput* switchObject;
-        Relay* compressor;
-        std::vector<double> time;
-        std::vector<Timer*> timerObject;
-        std::vector<DoubleSolenoid*> solenoid;
-
+public:
+    Pneumatics::Pneumatics();
+    void runPneumatics(int pnum);
+    void toggleSolenoid(DoubleSolenoid* sol);
+    void pressurize();
+private:
+    DoubleSolenoid* shift1;//8,7
+    DoubleSolenoid* clamp; //6,5
+    //DoubleSolenoid* solenoids[2];
+    //DoubleSolenoid* shift2;
+    float axis;
+    //Relay* compressor;
+    //DigitalInput* digiSwitch;
+    
 };
+
 #endif

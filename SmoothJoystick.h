@@ -1,39 +1,42 @@
-#ifndef SMOOTHJOYSTICK_H
-#define SMOOTHJOYSTICK_H
+#ifndef SMOOTH_JOYSTICK_H
+#define SMOOTH_JOYSTICK_H
 
 #include <Joystick.h>
-#include "controls.h"
+#include "Controls.h"
 #include <vector>
 #include <bitset>
 
 
-class SmoothJoystick: public Joystick
+class SmoothJoystick : public Joystick 
 {
-private:
-    static const int amountOfButtons = 12;
-    static const double deadZone = 0.1;
-    double TRIGGER_TOLERANCE;
 public:
-    SmoothJoystick(uint32_t port);
+    static const float JOYSTICK_ZERO_TOLERANCE = 0.1;
+    SmoothJoystick(UINT32);
     ~SmoothJoystick();
-    typedef void* joyfuncObjects;
-    typedef void(*joyFunctions)(joyfuncObjects,uint32_t);
-    typedef bool* functionBool;
-    typedef void* btn_Obj;
-    std::vector<joyfuncObjects> Objects;
-    std::vector<joyFunctions> joystickFuncs;
-    std::vector<uint32_t> joyfuncButtons;
-    std::vector<bool> funcBools;
-    std::vector<std::bitset<3>* > buttons;
-
-    void addJoyFunctions(joyFunctions controlFunctions, joyfuncObjects controlObjects, uint32_t btn);
-    void updateJoyFunctions();
-    void addButtons();
-    void buttonUpdate();
-    bool GetSmoothButton(int Button_number);
-    trigStates GetTriggerState();
-    bool isAxisZero(uint32_t axis);
-    static void updateHelper(void* instName);
+    bool GetRawButton(UINT32 btn);
+    bool IsAxisZero(unsigned int);
+    Trigger GetTriggerState();
+    typedef void* obj;
+    typedef void(*helpFunc)(obj,unsigned int);
+    void pushBtn(unsigned int,obj,helpFunc);
+    void updateSJ();
+    
+    typedef void* obj;
+    typedef void(*funcName)(obj);
+    static void updateHelper(obj);
+    
+private:
+    struct Handler {
+        obj param;
+        helpFunc callback;
+        unsigned int btnNumber;
+        bool prevState;
+    };
+    const static unsigned int NUMBUTTONS = 12;
+    const static unsigned int WAIT_TIME = 3;
+    std::bitset<WAIT_TIME> buttons[NUMBUTTONS];
+    void callHandler(unsigned int);
+    std::vector<Handler> handlers;
 };
 
-#endif //SMOOTHJOYSTICK_H
+#endif 

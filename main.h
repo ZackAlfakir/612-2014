@@ -3,35 +3,49 @@
 
 #include <IterativeRobot.h>
 #include <Joystick.h>
-#include "DriveTrain.h"
-#include <DigitalInput.h>
-#include <Relay.h>
-#include "Pneumatics.h"
-#include "Shifter.h"
-#include "Shooter.h"
-#include "FunctionRegistry.h"
 
-class main_robot: public IterativeRobot
+#include "SmoothJoystick.h"
+#include "Sensors.h"
+#include "Pneumatics.h"
+#include "Motors.h"
+#include "UpdateRegistry.h"
+
+class robot_class : public IterativeRobot
 {
+enum BUTTON
+{
+    PNEUMATICS, //pnumatics
+    SENSORS, //sensors
+    MOTORS //motors
+};
 public:
-    main_robot();
-    ~main_robot();
+    robot_class();
+
     void RobotInit();
-    void TeleopInit();
-    void AutonomousInit();
-    void TestInit();
+
     void DisabledInit();
-    void TeleopPeriodic();
-    void AutonomousPeriodic();
     void DisabledPeriodic();
+
+    void AutonomousInit();
+    void AutonomousPeriodic();
+
+    void TeleopInit();
+    void TeleopPeriodic();
+
+    void TestInit();
     void TestPeriodic();
+    
+    //DerekDrive* test_drivetrain;
     SmoothJoystick* driverJoy;
-    SmoothJoystick* gunnerJoy;
-    Pneumatics* pnum;
-    Shifter* shift;
-    DriveTrain* drive;
-    Shooter* shoot;
-    FunctionRegistry* update;
+    Sensors* sense;
+    Motors* motors;
+    Pneumatics* pneumatics;
+    UpdateRegistry updateRegistry;
+    int selection;
+private:
+    BUTTON button;
+    void printStuff();
+    void getButtons();
 };
 
 #endif // MAIN_H

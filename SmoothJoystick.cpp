@@ -1,133 +1,89 @@
 #include "SmoothJoystick.h"
-#include "controls.h"
-#include <vector>
-#include <bitset>
+#include "UpdateRegistry.h"
 #include "612.h"
 #include "main.h"
 
-//#include <EmperorKoch.h>
+#include <cmath>
 
-SmoothJoystick::SmoothJoystick(uint32_t port): Joystick(port)
+SmoothJoystick::SmoothJoystick(UINT32 a) : Joystick(a) 
 {
-     TRIGGER_TOLERANCE = 0.1;
-     addButtons();
-     robot -> update -> addFunctions(&updateHelper, (void*)this);
+    robot->updateRegistry.add(this, &updateHelper);
 }
 
-SmoothJoystick::~SmoothJoystick()
+SmoothJoystick::~SmoothJoystick() 
 {
-
+    
 }
 
-void SmoothJoystick::addJoyFunctions(joyFunctions controlFunctions, joyfuncObjects controlObjects, uint32_t btn)
+void SmoothJoystick::pushBtn(unsigned int btn, obj o, helpFunc h) 
 {
-    Objects.push_back(controlObjects);
-    joystickFuncs.push_back(controlFunctions);
-    joyfuncButtons.push_back(btn);
-    funcBools.push_back(false);
+    Handler handler={o,h,btn,false};
+    handlers.push_back(handler);
 }
 
-void SmoothJoystick::updateJoyFunctions()
+void SmoothJoystick::updateSJ() 
 {
-    for(unsigned int k = 0; k < funcBools.size(); k++)
+    for (unsigned int f = 0; f < NUMBUTTONS; f++)
     {
-        /*in the format of f(object)
-        loop check to see if function was called before so that it runs once*/
-        if(GetSmoothButton(joyfuncButtons.at(k)))
+        for (unsigned int s = 1; s < WAIT_TIME; s++)
         {
-            if(!funcBools.at(k))
-            {
-                (joystickFuncs.at(k))(Objects.at(k),joyfuncButtons.at(k));
-                funcBools.at(k)=true;
-            }
+            buttons[f][s - 1] = buttons [f][s];
         }
-        else
+        buttons[f][WAIT_TIME - 1] = Joystick::GetRawButton(f+1);
+    } 
+    for (unsigned int x = 0; x < handlers.size(); x++) 
+    {
+        Handler handler = handlers[x];
+        bool btnState = GetRawButton(handler.btnNumber);
+        if(btnState && !handler.prevState) 
         {
-            funcBools.at(k)=false;
-        }
-    }
-}
-
-void SmoothJoystick::addButtons()
-{
-    int m = 0;
-
-    std::bitset<3>* newButton = new std::bitset<3>();
-
-    do
-    {
-        buttons.push_back(newButton);
-        m = m + 1;
-    }
-    while (m < amountOfButtons);//don't know where this goes :P
-}
-
-bool SmoothJoystick::GetSmoothButton(int Button_number)
-{
-    int value1 = (buttons.at(Button_number))->at(0);
-    int value2 = (buttons.at(Button_number))->at(1);
-    int value3 = (buttons.at(Button_number))->at(2);
-
-    if(value1 == 1 && value2 == 1 && value3 == 1)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-void SmoothJoystick::buttonUpdate()
-{
-    for(int k = 0; k < amountOfButtons; k++)
-    {
-        std::bitset<3>* btnSet = buttons.at(k);
-        btnSet->at(2) = btnSet->at(1);
-        btnSet->at(1) = btnSet->at(0);
-        btnSet->at(0) = GetRawButton(k);
-    }
-}
-
-trigStates SmoothJoystick::GetTriggerState()//accepts axis port, returns 1 or -1 if axis value is in the Trigger tolerance range
-{
-    double a = GetRawAxis(AXIS_TRIGGERS);
-    if(a < 0)
-    {
-        a = (a * -1);
-    }
-    if(a > TRIGGER_TOLERANCE)
-    {
-        if(GetRawAxis(AXIS_TRIGGERS) > 0)
+            callHandler(x);
+            handler.prevState = true;
+        } 
+        else if (!btnState) 
         {
-            return TRIG_L;
-        }
-        else
-        {
-            return TRIG_R;
+            handler.prevState = false;
         }
     }
-    else
-    {
-        return TRIG_NONE;
-    }
 }
 
-bool SmoothJoystick::isAxisZero(uint32_t axis)
-{
-    if(GetRawAxis(axis) >= (deadZone * -1) || GetRawAxis(axis) <= (deadZone))
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}file:///usr/share/applications/kde4/konsole.desktop
-
-void SmoothJoystick::updateHelper(void* instName)
-{
-    SmoothJoystick* smoothObj = (SmoothJoystick*)instName;
-    smoothObj -> updateJoyFunctions();
-    smoothObj -> buttonUpdate();
+void SmoothJoystick::updateHelper(obj o) {
+    ((SmoothJoystick*)(o)) -> updateSJ();
 }
+
+Trigger SmoothJoystick::GetTriggerState() 
+{
+    float value=GetRawAxis(TRIGGER_AXIS);
+    if(value<TRIGGER_TOLERANCE-1) 
+    {
+        return TRIG_R;
+    } 
+    else if(value>1-TRIGGER_TOLERANCE) 
+    {
+        return TRIG_L;
+    }
+    return TRIG_NONE;
+}
+
+void SmoothJoystick::callHandler(unsigned int x) 
+{
+    Handler handler = handlers[x];
+    handler.callback(handler.param,handler.btnNumber);
+}
+
+bool SmoothJoystick::GetRawButton(UINT32 btn) 
+{
+    for (unsigned int i = 0; i < WAIT_TIME; i++)
+    {
+        if (!buttons[btn - 1][i])
+        {
+           return false;
+        }
+    }
+    return true;
+}
+
+bool SmoothJoystick::IsAxisZero(unsigned int btn) {
+    return (fabs(Joystick::GetRawAxis(btn)) < TRIGGER_TOLERANCE);
+}
+
