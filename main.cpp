@@ -130,6 +130,7 @@ void main_robot::TeleopPeriodic()
 
 void main_robot::AutonomousPeriodic()
 {
+    shift->shifter->Set(DoubleSolenoid::kReverse);
     update -> updateFunctions();
 //    drive -> TankDrive(0.0,0.0);
     drive -> update();
